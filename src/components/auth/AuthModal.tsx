@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -33,6 +35,7 @@ interface AuthModalProps {
   isOpen?: boolean;
   onClose?: () => void;
   defaultTab?: "login" | "register" | "recover";
+  onSuccess?: () => void;
 }
 
 const loginSchema = z.object({
@@ -60,6 +63,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
   isOpen = true,
   onClose = () => {},
   defaultTab = "login",
+  onSuccess = () => {},
 }) => {
   const [activeTab, setActiveTab] = useState<"login" | "register" | "recover">(
     defaultTab,
@@ -95,19 +99,108 @@ const AuthModal: React.FC<AuthModalProps> = ({
     },
   });
 
-  const onLoginSubmit = (data: z.infer<typeof loginSchema>) => {
-    console.log("Login data:", data);
-    // Handle login logic here
+  const { signIn } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const onLoginSubmit = async (data: z.infer<typeof loginSchema>) => {
+    setIsSubmitting(true);
+    try {
+      const { error } = await signIn(data.email, data.password);
+      if (error) {
+        toast({
+          title: "Login failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Login successful",
+          description: "You have been logged in successfully.",
+        });
+        onSuccess();
+        onClose();
+      }
+    } catch (error) {
+      toast({
+        title: "Login failed",
+        description: "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const onRegisterSubmit = (data: z.infer<typeof registerSchema>) => {
-    console.log("Register data:", data);
-    // Handle registration logic here
+  const { signUp } = useAuth();
+
+  const onRegisterSubmit = async (data: z.infer<typeof registerSchema>) => {
+    setIsSubmitting(true);
+    try {
+      const userData = {
+        name: data.name,
+        gender: data.gender,
+        dob: data.dob,
+        nationality: data.nationality,
+        occupation: data.occupation,
+        maritalStatus: data.maritalStatus,
+      };
+
+      const { error } = await signUp(data.email, data.password, userData);
+
+      if (error) {
+        toast({
+          title: "Registration failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Registration successful",
+          description: "Please check your email to confirm your account.",
+        });
+        setActiveTab("login");
+      }
+    } catch (error) {
+      toast({
+        title: "Registration failed",
+        description: "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const onRecoverSubmit = (data: z.infer<typeof recoverSchema>) => {
-    console.log("Recover data:", data);
-    // Handle password recovery logic here
+  const { resetPassword } = useAuth();
+
+  const onRecoverSubmit = async (data: z.infer<typeof recoverSchema>) => {
+    setIsSubmitting(true);
+    try {
+      const { error } = await resetPassword(data.email);
+
+      if (error) {
+        toast({
+          title: "Password recovery failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Recovery email sent",
+          description:
+            "Please check your email for password reset instructions.",
+        });
+        onClose();
+      }
+    } catch (error) {
+      toast({
+        title: "Password recovery failed",
+        description: "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -188,8 +281,12 @@ const AuthModal: React.FC<AuthModalProps> = ({
                   )}
                 />
 
-                <Button type="submit" className="w-full">
-                  Login
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Logging in..." : "Login"}
                 </Button>
               </form>
             </Form>
@@ -351,8 +448,12 @@ const AuthModal: React.FC<AuthModalProps> = ({
                   )}
                 />
 
-                <Button type="submit" className="w-full">
-                  Register
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Registering..." : "Register"}
                 </Button>
               </form>
             </Form>
@@ -378,8 +479,12 @@ const AuthModal: React.FC<AuthModalProps> = ({
                   )}
                 />
 
-                <Button type="submit" className="w-full">
-                  Send Recovery Link
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Sending..." : "Send Recovery Link"}
                 </Button>
               </form>
             </Form>

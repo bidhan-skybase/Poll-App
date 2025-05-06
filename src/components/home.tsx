@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "./ui/button";
 import {
   Card,
@@ -36,11 +37,16 @@ interface Poll {
 }
 
 const Home = () => {
+  const { user, signOut } = useAuth();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [activeTab, setActiveTab] = useState("trending");
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
+
+  useEffect(() => {
+    setIsAuthenticated(!!user);
+  }, [user]);
 
   // Mock polls data
   const mockPolls: Poll[] = [
@@ -119,7 +125,6 @@ const Home = () => {
   };
 
   const handleAuthSuccess = () => {
-    setIsAuthenticated(true);
     setShowAuthModal(false);
   };
 
@@ -127,7 +132,8 @@ const Home = () => {
     navigate("/dashboard");
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOut();
     setIsAuthenticated(false);
   };
 
